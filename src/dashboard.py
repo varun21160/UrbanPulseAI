@@ -48,10 +48,8 @@ ENTERPRISE_DARK_CSS = """
     /* Professional typography */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-    html, body, [class*="css"] {
+    html, body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        color: #F8FAFC;
-        background-color: #0A0E17;
     }
 
     .main .block-container {
