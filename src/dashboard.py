@@ -979,8 +979,10 @@ with tab_charts:
                     barmode="group",
                     color_discrete_sequence=["#0284C7", "#06B6D4", "#3B82F6", "#64748B", "#475569"],
                 )
+                rain_layout = PLOTLY_DARK_LAYOUT.copy()
+                rain_layout.pop("yaxis", None)
                 fig_rain.update_layout(
-                    **PLOTLY_DARK_LAYOUT,
+                    **rain_layout,
                     height=300,
                     yaxis=dict(
                         range=[0, 1],
