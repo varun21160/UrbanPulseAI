@@ -500,26 +500,6 @@ def load_traffic_history(route_id: Optional[str] = None, limit: int = 500) -> pd
     except Exception:
         records = []
     if not records:
-        # Fallback to generating live points so graphs and archive have data even without persistent DB
-        live_obs = fetch_live_weather_fallback()
-        if live_obs:
-            records = [
-                {
-                    "observation_id": r.get("observation_id", 1),
-                    "location_name": r.get("location_name", "Station"),
-                    "observed_at": r.get("observed_at"),
-                    "temperature_c": r.get("temperature_c"),
-                    "relative_humidity_pct": r.get("relative_humidity_pct"),
-                    "precipitation_mm": r.get("precipitation_mm", 0.0),
-                    "wind_speed_kmh": r.get("wind_speed_kmh"),
-                    "wind_gusts_kmh": r.get("wind_gusts_kmh"),
-                    "cloud_cover_pct": r.get("cloud_cover_pct"),
-                    "weather_code": r.get("weather_code", 0),
-                    "data_type": "live_api (direct)",
-                }
-                for r in live_obs
-            ]
-    if not records:
         return pd.DataFrame()
     df = pd.DataFrame(records)
     if "observed_at" in df.columns:
@@ -1444,7 +1424,7 @@ with tab_traffic:
         route_id=None if selected_loc_id == "all" else selected_loc_id,
         limit=300,
     )
-    if df_traffic.empty:
+    if df_traffic.empty or "estimated_duration_seconds" not in df_traffic.columns:
         st.info("No historical travel-time observations recorded yet in database.")
     else:
         df_traffic_view = df_traffic.copy()
