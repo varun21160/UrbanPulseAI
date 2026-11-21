@@ -312,14 +312,40 @@ def load_all_locations() -> List[Dict[str, Any]]:
         return [loc.to_dict() for loc in HYDERABAD_LOCATIONS]
 
 
-@st.cache_data(ttl=20, show_spinner=False)
-def load_latest_observations() -> List[Dict[str, Any]]:
-    """Fetch the latest observation for each location."""
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_live_weather_fallback() -> List[Dict[str, Any]]:
+    """Fetch live observations directly from Open-Meteo when PostgreSQL is not connected."""
     try:
-        db = get_db_manager()
-        return db.get_latest_observations()
+        from src.collect_weather import WeatherCollector
+        collector = WeatherCollector(get_config())
+        obs_list = []
+        for loc in HYDERABAD_LOCATIONS:
+            try:
+                obs = collector.fetch_weather(loc.location_id, loc.latitude, loc.longitude)
+                obs["location_name"] = loc.name
+                obs["latitude"] = loc.latitude
+                obs["longitude"] = loc.longitude
+                obs["observation_id"] = f"live-{loc.location_id}"
+                obs_list.append(obs)
+            except Exception:
+                pass
+        return obs_list
     except Exception:
         return []
+
+
+@st.cache_data(ttl=20, show_spinner=False)
+def load_latest_observations() -> List[Dict[str, Any]]:
+    """Fetch the latest observation for each location (with live API fallback)."""
+    try:
+        db = get_db_manager()
+        res = db.get_latest_observations()
+        if res and any(r.get("observation_id") is not None for r in res):
+            return res
+    except Exception:
+        pass
+    # Live Open-Meteo direct fetch fallback
+    return fetch_live_weather_fallback()
 
 
 @st.cache_data(ttl=25, show_spinner=False)
@@ -336,6 +362,11 @@ def load_historical_series(
         records = db.get_location_history_series(location_id=location_id, limit=limit)
     except Exception:
         records = []
+    if not records:
+        # Fallback to generating live points so graphs have data even without persistent DB
+        live_obs = fetch_live_weather_fallback()
+        if live_obs:
+            records = live_obs
     if not records:
         return pd.DataFrame()
     df = pd.DataFrame(records)
@@ -412,6 +443,11 @@ def load_traffic_history(route_id: Optional[str] = None, limit: int = 500) -> pd
         records = db.get_corridor_travel_time_history(route_id=route_id, limit=limit)
     except Exception:
         records = []
+    if not records:
+        # Fallback to generating live points so graphs have data even without persistent DB
+        live_obs = fetch_live_weather_fallback()
+        if live_obs:
+            records = live_obs
     if not records:
         return pd.DataFrame()
     df = pd.DataFrame(records)
