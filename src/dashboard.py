@@ -305,15 +305,21 @@ def get_db_manager() -> DatabaseManager:
 @st.cache_data(ttl=25, show_spinner=False)
 def load_all_locations() -> List[Dict[str, Any]]:
     """Fetch all monitored urban locations."""
-    db = get_db_manager()
-    return db.get_all_locations()
+    try:
+        db = get_db_manager()
+        return db.get_all_locations()
+    except Exception as e:
+        return [loc.to_dict() for loc in HYDERABAD_LOCATIONS]
 
 
 @st.cache_data(ttl=20, show_spinner=False)
 def load_latest_observations() -> List[Dict[str, Any]]:
     """Fetch the latest observation for each location."""
-    db = get_db_manager()
-    return db.get_latest_observations()
+    try:
+        db = get_db_manager()
+        return db.get_latest_observations()
+    except Exception:
+        return []
 
 
 @st.cache_data(ttl=25, show_spinner=False)
@@ -325,8 +331,11 @@ def load_historical_series(
     Fetch chronological time-series observations from PostgreSQL.
     Returns clean pandas DataFrame with parsed UTC and IST datetimes.
     """
-    db = get_db_manager()
-    records = db.get_location_history_series(location_id=location_id, limit=limit)
+    try:
+        db = get_db_manager()
+        records = db.get_location_history_series(location_id=location_id, limit=limit)
+    except Exception:
+        records = []
     if not records:
         return pd.DataFrame()
     df = pd.DataFrame(records)
@@ -345,46 +354,64 @@ def load_anomalies(
     limit: int = 100,
 ) -> List[Dict[str, Any]]:
     """Fetch recorded weather anomalies from database."""
-    db = get_db_manager()
-    return db.get_recent_anomalies(limit=limit, location_id=location_id)
+    try:
+        db = get_db_manager()
+        return db.get_recent_anomalies(limit=limit, location_id=location_id)
+    except Exception:
+        return []
 
 
 @st.cache_data(ttl=25, show_spinner=False)
 def load_system_health() -> Dict[str, Any]:
     """Fetch overall ingestion and system health metrics."""
-    db = get_db_manager()
-    return db.get_health_metrics()
+    try:
+        db = get_db_manager()
+        return db.get_health_metrics()
+    except Exception:
+        return {}
 
 
 @st.cache_data(ttl=25, show_spinner=False)
 def load_recent_runs(limit: int = 10) -> List[Dict[str, Any]]:
     """Fetch recent ingestion run audit records."""
-    db = get_db_manager()
-    return db.get_recent_ingestion_runs(limit=limit)
+    try:
+        db = get_db_manager()
+        return db.get_recent_ingestion_runs(limit=limit)
+    except Exception:
+        return []
 
 
 @st.cache_data(ttl=25, show_spinner=False)
 def load_all_corridors() -> List[Dict[str, Any]]:
     """Fetch all monitored Hyderabad road corridors."""
-    db = get_db_manager()
-    db.init_traffic_tables()
-    return db.get_all_corridors()
+    try:
+        db = get_db_manager()
+        db.init_traffic_tables()
+        return db.get_all_corridors()
+    except Exception:
+        return [c.to_dict() for c in get_config().corridors]
 
 
 @st.cache_data(ttl=20, show_spinner=False)
 def load_latest_traffic() -> List[Dict[str, Any]]:
     """Fetch latest travel time estimates for each corridor."""
-    db = get_db_manager()
-    db.init_traffic_tables()
-    return db.get_latest_corridor_travel_times()
+    try:
+        db = get_db_manager()
+        db.init_traffic_tables()
+        return db.get_latest_corridor_travel_times()
+    except Exception:
+        return []
 
 
 @st.cache_data(ttl=25, show_spinner=False)
 def load_traffic_history(route_id: Optional[str] = None, limit: int = 500) -> pd.DataFrame:
     """Fetch historical corridor travel time observations."""
-    db = get_db_manager()
-    db.init_traffic_tables()
-    records = db.get_corridor_travel_time_history(route_id=route_id, limit=limit)
+    try:
+        db = get_db_manager()
+        db.init_traffic_tables()
+        records = db.get_corridor_travel_time_history(route_id=route_id, limit=limit)
+    except Exception:
+        records = []
     if not records:
         return pd.DataFrame()
     df = pd.DataFrame(records)
@@ -399,9 +426,12 @@ def load_traffic_history(route_id: Optional[str] = None, limit: int = 500) -> pd
 @st.cache_data(ttl=20, show_spinner=False)
 def load_traffic_disruptions(route_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
     """Fetch recorded traffic disruptions from database."""
-    db = get_db_manager()
-    db.init_traffic_tables()
-    return db.get_recent_traffic_disruptions(limit=limit, route_id=route_id)
+    try:
+        db = get_db_manager()
+        db.init_traffic_tables()
+        return db.get_recent_traffic_disruptions(limit=limit, route_id=route_id)
+    except Exception:
+        return []
 
 
 # -----------------------------------------------------------------------------
@@ -546,6 +576,22 @@ latest_run = health_metrics.get("latest_run") or {}
 historical_stats = health_metrics.get("historical_stats") or {}
 latest_obs_list = load_latest_observations()
 active_records = [r for r in latest_obs_list if r.get("observation_id") is not None]
+if not active_records:
+    # Fallback to configured locations when DB has no observations or is connecting
+    active_records = [
+        {
+            "location_id": loc["location_id"],
+            "location_name": loc["name"],
+            "latitude": loc["latitude"],
+            "longitude": loc["longitude"],
+            "temperature_c": "--",
+            "relative_humidity_pct": "--",
+            "wind_speed_kmh": "--",
+            "precipitation_mm": 0.0,
+            "weather_code": 0,
+        }
+        for loc in load_all_locations()
+    ]
 
 # Determine timestamps
 now_utc = datetime.now(timezone.utc)
