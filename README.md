@@ -2,6 +2,8 @@
 
 Real-time urban environmental and weather intelligence data pipeline for Hyderabad, India.
 
+🌐 **Live Streamlit Cloud Dashboard:** [https://urbanpulse-aii.streamlit.app/](https://urbanpulse-aii.streamlit.app/)
+
 ---
 
 ## Architecture Overview
