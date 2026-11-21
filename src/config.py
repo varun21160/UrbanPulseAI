@@ -174,6 +174,8 @@ class DatabaseConfig:
     @property
     def connection_params(self) -> Dict[str, Any]:
         """Return parameters dictionary for psycopg.connect."""
+        if self.database_url:
+            return {"conninfo": self.database_url}
         if self.host and self.user:
             return {
                 "host": self.host,
@@ -182,8 +184,6 @@ class DatabaseConfig:
                 "user": self.user,
                 "password": self.password,
             }
-        if self.database_url:
-            return {"conninfo": self.database_url}
         return {
             "host": self.host,
             "port": self.port,
