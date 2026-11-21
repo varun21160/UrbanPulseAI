@@ -19,31 +19,26 @@ UrbanPulseAI collects, validates, and archives meteorological observations acros
 
 ```text
 UrbanPulseAI/
-├── .venv/                  # Python virtual environment
-├── .env                    # Environment variables (DB credentials, API keys)
 ├── .env.example            # Environment configuration template
 ├── .gitignore              # Git ignore rules
 ├── requirements.txt        # Python package dependencies
 ├── README.md               # Project documentation
-├── test_db.py              # Quick DB connection test script
+├── app.py                  # Dashboard root entrypoint
 ├── sql/
-│   └── schema.sql          # PostgreSQL DDL for locations, weather_observations, ingestion_runs
+│   └── schema.sql          # PostgreSQL DDL for tables and views
 ├── src/
 │   ├── __init__.py         # Package initialization
-│   ├── config.py           # Configuration loader, scheduler settings, DQ & AD thresholds
+│   ├── app.py              # Redirect proxy entrypoint
+│   ├── config.py           # Configuration loader, locations, corridors & thresholds
 │   ├── data_quality.py     # Automated data-quality checks, physical bounds & staleness detection
 │   ├── database.py         # PostgreSQL connection management, CRUD, health & anomaly handlers
 │   ├── detector.py         # Explainable anomaly detection engine (MAD + Isolation Forest)
-│   └── collect_weather.py  # Weather data collection, rate-limited scheduler & unified CLI
-├── tests/                  # Automated unit and integration test suite (31 tests)
-│   ├── __init__.py
-│   ├── fixtures.py         # Explicitly labeled synthetic test fixtures
-│   ├── test_collector.py   # Normalization, missing fields & API error tests
-│   ├── test_data_quality.py# Data quality boundary and anomaly tests
-│   ├── test_database.py    # Duplicate handling & health metrics tests
-│   └── test_detector.py    # Insufficient history, MAD, Isolation Forest, leakage & deduplication
+│   ├── detector_traffic.py # Road corridor travel time anomaly & disruption engine
+│   ├── collect_weather.py  # Weather data collection, rate-limited scheduler & CLI
+│   ├── collect_traffic.py  # TomTom corridor routing & travel-time collector
+│   └── dashboard.py        # Streamlit enterprise real-time intelligence dashboard
 └── logs/                   # Rotating collection logs
-    └── weather_collector.log
+    └── .gitkeep
 ```
 
 ---
@@ -78,12 +73,15 @@ UrbanPulseAI/
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Launch Streamlit Weather Intelligence Dashboard
+### 2. Launch Streamlit Weather & Traffic Intelligence Dashboard
 ```powershell
-streamlit run app.py
-# Or directly:
-streamlit run src/dashboard.py
+python -m streamlit run app.py
 ```
+Or with virtual environment python:
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
+```
+Open **http://localhost:8501** in your browser to view the interactive map and analytics.
 
 ### 3. Verify Database Connection & Tables
 ```powershell
