@@ -1,3 +1,0 @@
-"""
-UrbanPulseAI Test Suite
-"""
