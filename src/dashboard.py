@@ -709,15 +709,23 @@ anomalies_list = load_anomalies(location_id=None if selected_loc_id == "all" els
 active_anomalies_count = len([a for a in anomalies_list if a.get("status") == "active"])
 
 # Compute actual statistics
+def _safe_float(val: Any) -> Optional[float]:
+    try:
+        return float(val) if val is not None else None
+    except (ValueError, TypeError):
+        return None
+
 if filtered_latest:
-    temps = [float(r["temperature_c"]) for r in filtered_latest if r.get("temperature_c") is not None]
+    temps = [t for t in (_safe_float(r.get("temperature_c")) for r in filtered_latest) if t is not None]
     rains = [
-        float(r["precipitation_mm"] if r.get("precipitation_mm") is not None else r["rain_mm"])
-        for r in filtered_latest
-        if r.get("precipitation_mm") is not None or r.get("rain_mm") is not None
+        r_val for r_val in (
+            _safe_float(r.get("precipitation_mm")) if r.get("precipitation_mm") is not None
+            else _safe_float(r.get("rain_mm"))
+            for r in filtered_latest
+        ) if r_val is not None
     ]
-    winds = [float(r["wind_speed_kmh"]) for r in filtered_latest if r.get("wind_speed_kmh") is not None]
-    gusts = [float(r["wind_gusts_kmh"]) for r in filtered_latest if r.get("wind_gusts_kmh") is not None]
+    winds = [w for w in (_safe_float(r.get("wind_speed_kmh")) for r in filtered_latest) if w is not None]
+    gusts = [g for g in (_safe_float(r.get("wind_gusts_kmh")) for r in filtered_latest) if g is not None]
 
     mean_temp = sum(temps) / len(temps) if temps else 0.0
     min_temp, max_temp = (min(temps), max(temps)) if temps else (0.0, 0.0)
